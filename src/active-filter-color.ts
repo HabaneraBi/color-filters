@@ -47,6 +47,30 @@ export function activeFilterColor(hex: string) {
   l = Math.min(1, Math.max(0, l));
   chroma = Math.max(0, chroma);
 
-  const out = toHexClamped({ mode: "oklch", l, c: chroma, h });
-  return formatHex(out) ?? "";
+  let outHex = formatHex(toHexClamped({ mode: "oklch", l, c: chroma, h }));
+
+  const active = oklch(outHex);
+  if (active) {
+    const dL = Math.abs(active.l - l);
+    const dC = Math.abs((active.c ?? 0) - (chroma ?? 0));
+
+    const bgVeryLight = l >= 0.92;
+    const tooSimilar = dL < 0.035 && dC < 0.03;
+
+    if (bgVeryLight && tooSimilar) {
+      const newL = Math.max(0, active.l - 0.1);
+      const newC = Math.max((active.c ?? 0) * 2.8, (active.c ?? 0) + 0.08, 0.1); // насыщеннее
+
+      outHex = formatHex(
+        toHexClamped({
+          mode: "oklch",
+          l: newL,
+          c: newC,
+          h: active.h ?? h,
+        }),
+      );
+    }
+  }
+
+  return outHex ?? "";
 }

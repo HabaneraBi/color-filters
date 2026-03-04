@@ -28,7 +28,7 @@ function Swatch({ title, hex }: { title: string; hex: string }) {
 }
 
 export default function App() {
-  const [base, setBase] = useState("#3ea4e8");
+  const [base, setBase] = useState("#f0f9ff");
   const active = useMemo(() => activeFilterColor(base), [base]);
 
   const examples = [
