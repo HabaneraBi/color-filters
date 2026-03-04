@@ -1,4 +1,4 @@
-import { oklch, formatHex, clampGamut } from "culori";
+import { oklch, formatHex, clampGamut, inGamut } from "culori";
 
 const toHexClamped = clampGamut("rgb");
 
@@ -6,6 +6,31 @@ const inHue = (h: number, from: number, to: number) => {
   if (from <= to) return h >= from && h <= to;
   return h >= from || h <= to;
 };
+
+const inRgbGamut = inGamut("rgb");
+
+function toHexByReducingChroma(color: {
+  mode: "oklch";
+  l: number;
+  c: number;
+  h: number;
+}) {
+  let c = Math.max(0, color.c);
+  let candidate = { ...color, c };
+
+  // если уже в gamut — отлично
+  if (inRgbGamut(candidate)) return formatHex(candidate);
+
+  // иначе уменьшаем chroma, сохраняя hue и L
+  for (let i = 0; i < 40; i++) {
+    c *= 0.9; // плавное снижение
+    candidate = { ...candidate, c };
+    if (inRgbGamut(candidate)) return formatHex(candidate);
+  }
+
+  // fallback: почти серый того же hue
+  return formatHex({ ...candidate, c: 0 });
+}
 
 export function activeFilterColor(hex: string) {
   const oklchColor = oklch(hex);
@@ -47,30 +72,22 @@ export function activeFilterColor(hex: string) {
   l = Math.min(1, Math.max(0, l));
   chroma = Math.max(0, chroma);
 
-  let outHex = formatHex(toHexClamped({ mode: "oklch", l, c: chroma, h }));
+  const bgVeryLight = oklchColor.l >= 0.92;
+  const activeTooGray = chroma < 0.06;
 
-  const active = oklch(outHex);
-  if (active) {
-    const dL = Math.abs(active.l - l);
-    const dC = Math.abs((active.c ?? 0) - (chroma ?? 0));
+  if (bgVeryLight && activeTooGray) {
+    l = Math.max(0, l - 0.09);
 
-    const bgVeryLight = l >= 0.92;
-    const tooSimilar = dL < 0.035 && dC < 0.03;
+    const isPinkPurple = inHue(h, 300, 25);
 
-    if (bgVeryLight && tooSimilar) {
-      const newL = Math.max(0, active.l - 0.1);
-      const newC = Math.max((active.c ?? 0) * 2.8, (active.c ?? 0) + 0.08, 0.1); // насыщеннее
+    const boost = isPinkPurple ? 2.0 : 2.6;
+    const minC = isPinkPurple ? 0.085 : 0.11;
 
-      outHex = formatHex(
-        toHexClamped({
-          mode: "oklch",
-          l: newL,
-          c: newC,
-          h: active.h ?? h,
-        }),
-      );
-    }
+    chroma = Math.max(chroma * boost, minC);
+
+    const maxC = isPinkPurple ? 0.16 : 0.22;
+    chroma = Math.min(chroma, maxC);
   }
 
-  return outHex ?? "";
+  return toHexByReducingChroma({ mode: "oklch", l, c: chroma, h });
 }
