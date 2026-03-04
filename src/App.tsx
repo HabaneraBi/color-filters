@@ -8,7 +8,7 @@ import { textColorFromBackground } from "./get-text-color";
 
 function Swatch({ title, hex }: { title: string; hex: string }) {
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ display: "grid", justifyContent: "center", gap: 8 }}>
       <div style={{ fontSize: 12, opacity: 0.7 }}>{title}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div
@@ -105,7 +105,7 @@ export default function App() {
             background: base,
           }}
         >
-          <span style={{ fontSize: 12, opacity: 0.75 }}>
+          <span style={{ fontSize: 12, opacity: 0.75, color: "#000" }}>
             Пример “иконки фильтра”
           </span>
           <div
